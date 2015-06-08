@@ -1,0 +1,91 @@
+#!/bin/bash
+
+#
+#  Copyright 2015 Prairies Ariea
+#
+#  This file is part of Files Sync.
+#
+#  Files Sync is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Files Sync is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with Files Sync. If not, see <http://www.gnu.org/licenses/>.
+#
+##
+
+
+PS4="CMD:\${0}:\${LINENO}: "
+set -x
+set -e
+
+declare -r  shellCodeSuccess=0
+declare -r  shellCodeFailure=1
+
+declare     errorState=${shellCodeSuccess}
+
+declare -ra wantedExeFilesPool=( \
+                        "install" \
+                        "rpmbuild" \
+                        "python3" \
+                        )
+
+declare -ra wantedLibFilesPool=( \
+                        "argparse.py" \
+                        )
+
+function searchForRequiredFiles {
+    local -r  fileType="${1}"
+    shift
+    local -ra fileNamesPool=("${@}")
+
+    local     name=""
+
+    case "${fileType}" in
+        lib)
+            for name in  "${fileNamesPool[@]}" ; do
+                if ! locate "${name}" ; then
+                    echo "ERROR:${0}:${LINENO}: File '${name}' not found." >&2
+                    errorState=${shellCodeFailure}
+                fi
+            done
+        ;;
+        exe)
+            for name in  "${fileNamesPool[@]}" ; do
+                if ! which "${name}" ; then
+                    echo "ERROR:${0}:${LINENO}: Executable file '${name}' not found." >&2
+                    errorState=${shellCodeFailure}
+                fi
+            done
+        ;;
+        *)
+            echo "ERROR:${0}:${LINENO}: Unknown file type '${fileType}'." >&2
+            exit ${shellCodeFailure}
+        ;;
+    esac
+}
+
+
+function validateOnExit {
+    if [ "${errorState}" != "${shellCodeSuccess}" ] ; then
+        set +x
+        echo "ERROR:${0}:${LINENO}: Have error state equal to '${errorState}'. This is evaluated as error." >&2
+        exit ${shellCodeFailure}
+    fi
+    return ${errorState}
+}
+
+searchForRequiredFiles "exe" "${wantedExeFilesPool[@]}"
+searchForRequiredFiles "lib" "${wantedLibFilesPool[@]}"
+
+validateOnExit
+
+set +x
+echo -ne "\n"
+echo "INFO:${0}:${LINENO}: Job done."

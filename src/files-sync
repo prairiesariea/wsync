@@ -1,0 +1,121 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+
+#
+#  Copyright 2015 Prairies Ariea
+#
+#  This file is part of Files Sync.
+#
+#  Files Sync is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Files Sync is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with Files Sync. If not, see <http://www.gnu.org/licenses/>.
+#
+##
+
+
+from __future__ import print_function
+import argparse
+import sys
+from os.path import expanduser
+from os.path import join as path
+from os.path import abspath
+# from os.path import dirname
+from os.path import basename
+from syncwrap.NodeSpec import NodeSpec
+from syncwrap.RSync import RSync
+
+
+###
+##
+#
+
+
+def getCLIArgs():
+    mainDescriptionText = """ This application is wrapper for famous utility
+                       'rsync'. It is intended to assist in replication of huge
+                       number of files and directories in a same way across
+                       several hosts and over SSH, keeping evident bonds
+                       between credentials, URLs and paths to be synchronised.
+
+                       This app have command line interface argument:
+                       configuration file path. A nodes with files to be
+                       synchronised are described via this configuration file.
+                       Please see ideas and usage inside testing related parts
+                       of this code. This app will replicate files from node
+                       in configuration section named 'donor' into node from
+                       'acceptor' section. Underlying implementation allows to
+                       extend this functionality.
+
+                       There is CLI argument to create configuration file
+                       example.
+                    """
+    parser = argparse.ArgumentParser(description=mainDescriptionText)
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--conf',
+                                dest='confFileName',
+                                action='store',
+                                help="YAML configuration file.",
+                                metavar=' path-to-configuration-file')
+    group.add_argument('--create-example-conf',
+                                action='store',
+                                nargs='*',
+                                dest='newExampleConfFilePath',
+                                help="Will create example configuration file \
+                                        and report it's name. A file name may \
+                                        be specified after this option.",
+                                metavar=' path-where-create-example')
+
+
+    cliArgs = parser.parse_args()
+
+    return cliArgs
+
+
+def doMainJob(cliArgs):
+    cliArgs.confFileName = abspath(cliArgs.confFileName)
+    donor = NodeSpec().pickFromFile(cliArgs.confFileName, 'donor')
+    acceptor = NodeSpec().pickFromFile(cliArgs.confFileName, 'acceptor')
+    RSync(donor, acceptor).doSync()
+
+
+def createExampleConfigurationFile(cliArgs):
+    from syncwrap.TestHelpers import TestHelpers
+    from syncwrap.TestData import TestData
+
+    if len(cliArgs.newExampleConfFilePath) > 0:
+        requestedFileName = cliArgs.newExampleConfFilePath[0]
+    else:
+        defaultExampleConfFileName = path(expanduser("~"),
+                                        basename(__file__) + ".example.conf")
+        requestedFileName = defaultExampleConfFileName
+
+    TestHelpers().createConfFile(requestedFileName,
+                                    TestData().configurationData)
+
+    sys.stdout.write("Have created example YAML configuration file '%s'.\n" \
+                                                        % requestedFileName)
+
+
+###
+##
+#
+
+
+if __name__ == '__main__':
+    cliArgs = getCLIArgs()
+
+    if cliArgs.newExampleConfFilePath != None:
+        createExampleConfigurationFile(cliArgs)
+    else:
+        doMainJob(cliArgs)
+

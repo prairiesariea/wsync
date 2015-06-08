@@ -1,0 +1,13 @@
+/misc/
+/tmp/
+
+*.tar.gz
+
+/output/
+/rpmbuild/
+*.pyc
+
+*.geany
+.settings
+.project
+.pydevproject
